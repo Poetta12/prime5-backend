@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/Poetta12/prime5-backend/issues"
   },
-  "homepage": "https://github.com/Poetta12/prime5-backend#readme"
+  "homepage": "https://github.com/Poetta12/prime5-backend#readme",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2"
+  }
 }
