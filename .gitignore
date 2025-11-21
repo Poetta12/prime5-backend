@@ -1,0 +1,19 @@
+# Dépendances
+node_modules/
+
+# Environnements
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Vercel / build
+.vercel/
+.next/
+dist/
+out/
+
+# Système
+.DS_Store
+Thumbs.db
