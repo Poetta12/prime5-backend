@@ -3,14 +3,51 @@
 
 const sql = require("../../lib/db"); // même lib que les autres endpoints
 
+// Petit helper pour lire le JSON du body sur Vercel (Node "pur")
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+
+    req.on("data", (chunk) => {
+      data += chunk;
+    });
+
+    req.on("end", () => {
+      if (!data) {
+        return resolve({});
+      }
+      try {
+        const json = JSON.parse(data);
+        resolve(json);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    req.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST" && req.method !== "PATCH") {
     res.setHeader("Allow", "POST, PATCH");
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  // Vercel parse req.body en JSON si Content-Type: application/json
-  const { id, status, home_score, away_score } = req.body || {};
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (err) {
+    console.error("Invalid JSON body:", err);
+    return res.status(400).json({
+      error: "Invalid JSON body",
+      details: err.message,
+    });
+  }
+
+  const { id, status, home_score, away_score } = body || {};
 
   if (!id) {
     return res.status(400).json({ error: "Missing 'id' in body" });
@@ -28,7 +65,6 @@ module.exports = async (req, res) => {
     const rows = await sql`
       UPDATE pronos
       SET
-        -- si la valeur JS est NULL/undefined => COALESCE garde l'ancienne valeur
         status      = COALESCE(${status}, status),
         home_score  = COALESCE(${home_score}, home_score),
         away_score  = COALESCE(${away_score}, away_score)
