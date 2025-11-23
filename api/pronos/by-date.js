@@ -1,8 +1,7 @@
-// api/pronos/today.js
+// api/pronos/by-date.js
+// Récupère tous les pronos d'une date donnée (paramètre ?date=YYYY-MM-DD)
 
-// Endpoint : pronos du jour en base Postgres (Neon)
-
-const sql = require("../../lib/db"); // chemin depuis /api/pronos
+const sql = require("../../lib/db");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -10,8 +9,20 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  // date ISO du jour en YYYY-MM-DD (UTC) pour l’info dans la réponse
-  const today = new Date().toISOString().slice(0, 10);
+  // On parse l'URL pour récupérer ?date=...
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const dateParam = url.searchParams.get("date");
+
+  // Si pas de date fournie => on prend la date du jour (UTC)
+  const targetDate = dateParam || new Date().toISOString().slice(0, 10);
+
+  // Validation basique du format YYYY-MM-DD si l'utilisateur en envoie une
+  if (dateParam && !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+    return res.status(400).json({
+      error: "Invalid 'date' format, expected YYYY-MM-DD",
+    });
+  }
+
   const now = new Date();
 
   try {
@@ -36,17 +47,16 @@ module.exports = async (req, res) => {
         home_score,
         away_score
       FROM pronos
-      WHERE kickoff::date = CURRENT_DATE
+      WHERE kickoff::date = ${targetDate}
       ORDER BY kickoff ASC, id ASC;
     `;
 
-    // On enrichit chaque prono avec des flags utiles pour le front
     const pronos = rows.map((row) => {
       const kickoffDate =
         row.kickoff instanceof Date ? row.kickoff : new Date(row.kickoff);
 
-      const isFinished = kickoffDate <= now;          // match passé ou en cours
-      const isValidated = row.status !== "pending";   // prono déjà jugé
+      const isFinished = kickoffDate <= now;
+      const isValidated = row.status !== "pending";
 
       return {
         ...row,
@@ -56,16 +66,16 @@ module.exports = async (req, res) => {
     });
 
     return res.status(200).json({
-      date: today,
+      date: targetDate,
+      now_utc: now.toISOString(),
       count: pronos.length,
       pronos,
     });
   } catch (error) {
-    console.error("Error fetching today's pronos:", error);
-
+    console.error("Error fetching pronos by date:", error);
     return res.status(500).json({
       error: "Internal Server Error",
-      message: "Failed to load today's pronos",
+      message: "Failed to load pronos for given date",
       details: error.message,
     });
   }
