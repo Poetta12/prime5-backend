@@ -62,9 +62,9 @@ function computeStatus({
   }
 
   // 3) Si le prono est déjà jugé (won/lost/void) -> on ne change rien automatiquement
-  if (currentStatus !== "pending") {
-    return currentStatus;
-  }
+  //if (currentStatus !== "pending") {
+  //  return currentStatus;
+  //}
 
   const totalGoals = homeScore + awayScore;
   const mkt = (market || "").toLowerCase();
